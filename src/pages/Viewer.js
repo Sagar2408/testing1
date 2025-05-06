@@ -16,13 +16,14 @@ const Viewer = () => {
 
     if (type === "cast") {
       socket.on("screen-data", (d) => {
-        setScreenData(`data:image/jpeg;base64,${d}`);
+        const base64 = typeof d === "string" ? d : d?.data || "";
+        setScreenData(`data:image/jpeg;base64,${base64}`);
       });
     }
 
     if (type === "audio") {
-      socket.on("audio-data", (audioBuffer) => {
-        const blob = new Blob([audioBuffer], { type: "audio/webm" });
+      socket.on("audio-data", (audioBlob) => {
+        const blob = new Blob([audioBlob], { type: "audio/webm" });
         const url = URL.createObjectURL(blob);
         audioRef.current.src = url;
         audioRef.current.play();
@@ -30,8 +31,8 @@ const Viewer = () => {
     }
 
     if (type === "video") {
-      socket.on("video-data", (videoBuffer) => {
-        const blob = new Blob([videoBuffer], { type: "video/webm" });
+      socket.on("video-data", (videoBlob) => {
+        const blob = new Blob([videoBlob], { type: "video/webm" });
         const url = URL.createObjectURL(blob);
         videoRef.current.src = url;
         videoRef.current.play();
@@ -50,9 +51,15 @@ const Viewer = () => {
       <Navbar />
       <h2>Viewing: {type}</h2>
 
-      {type === "cast" && <img src={screenData} alt="Live Screen" />}
-      {type === "audio" && <audio ref={audioRef} controls />}
-      {type === "video" && <video ref={videoRef} controls width="640" height="360" />}
+      {type === "cast" && (
+        <img
+          src={screenData}
+          alt="Live Screen"
+          style={{ width: "640px", height: "360px", border: "1px solid gray" }}
+        />
+      )}
+      {type === "audio" && <audio ref={audioRef} controls autoPlay />}
+      {type === "video" && <video ref={videoRef} controls autoPlay width="640" height="360" />}
     </div>
   );
 };
