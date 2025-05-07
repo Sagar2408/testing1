@@ -12,46 +12,48 @@ const socket = io("https://casttesting.onrender.com", {
 const Viewer = () => {
   const { type } = useParams();
   const [screenData, setScreenData] = useState("");
-  const [videoData, setVideoData] = useState("");
+  const [videoFrame, setVideoFrame] = useState("");
+  const [audioURL, setAudioURL] = useState("");
   const audioRef = useRef(null);
 
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
-
-    if (!socket.connected) socket.connect();
-
     socket.emit("join-room", "admin-room");
     console.log("👋 Joined admin-room");
 
-    const handleScreen = (d) => {
-      const base64 = typeof d === "string" ? d : d?.data || "";
-      setScreenData(`data:image/jpeg;base64,${base64}`);
-    };
+    if (type === "cast") {
+      socket.on("screen-data", (d) => {
+        const base64 = typeof d === "string" ? d : d?.data || "";
+        setScreenData(`data:image/jpeg;base64,${base64}`);
+        console.log("🖼️ Received screen-data");
+      });
+    }
 
-    const handleAudio = (audioBlob) => {
-      console.log("🔊 Received audio-data");
-      const blob = new Blob([audioBlob], { type: "audio/wav" }); // updated MIME
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.play();
-      }
-    };
+    if (type === "video") {
+      socket.on("video-data", (base64Data) => {
+        const image = typeof base64Data === "string" ? base64Data : base64Data?.data || "";
+        setVideoFrame(`data:image/jpeg;base64,${image}`);
+        console.log("🎥 Received video-data");
+      });
+    }
 
-    const handleVideo = (d) => {
-      console.log("🎥 Received video-data");
-      const base64 = typeof d === "string" ? d : d?.data || "";
-      setVideoData(`data:image/jpeg;base64,${base64}`);
-    };
-
-    if (type === "cast") socket.on("screen-data", handleScreen);
-    if (type === "audio") socket.on("audio-data", handleAudio);
-    if (type === "video") socket.on("video-data", handleVideo);
+    if (type === "audio") {
+      socket.on("audio-data", (buffer) => {
+        const blob = new Blob([buffer], { type: "audio/wav" });
+        const url = URL.createObjectURL(blob);
+        setAudioURL(url);
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.play();
+        }
+        console.log("🔊 Received audio-data");
+      });
+    }
 
     return () => {
-      socket.off("screen-data", handleScreen);
-      socket.off("audio-data", handleAudio);
-      socket.off("video-data", handleVideo);
+      socket.off("screen-data");
+      socket.off("video-data");
+      socket.off("audio-data");
     };
   }, [type]);
 
@@ -63,20 +65,20 @@ const Viewer = () => {
       {type === "cast" && (
         <img
           src={screenData}
-          alt="Live Screen"
+          alt="Live Screen Frame"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
 
-      {type === "audio" && <audio ref={audioRef} controls autoPlay />}
-
       {type === "video" && (
         <img
-          src={videoData}
+          src={videoFrame}
           alt="Live Video Frame"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
+
+      {type === "audio" && <audio ref={audioRef} controls autoPlay src={audioURL} />}
     </div>
   );
 };
