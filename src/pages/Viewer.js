@@ -12,43 +12,78 @@ const socket = io("https://casttesting.onrender.com", {
 const Viewer = () => {
   const { type } = useParams();
   const [screenData, setScreenData] = useState("");
-  const [videoFrame, setVideoFrame] = useState("");
-  const [audioURL, setAudioURL] = useState("");
+  const audioQueue = useRef([]);
+  const videoQueue = useRef([]);
   const audioRef = useRef(null);
+  const videoRef = useRef(null);
+
+  // Utility to convert base64 to Blob
+  const base64ToBlob = (base64, mime) => {
+    const byteChars = atob(base64);
+    const byteArray = new Uint8Array(
+      Array.from(byteChars).map((c) => c.charCodeAt(0))
+    );
+    return new Blob([byteArray], { type: mime });
+  };
+
+  // Play audio buffer every 2s
+  useEffect(() => {
+    if (type !== "audio") return;
+
+    const interval = setInterval(() => {
+      if (audioQueue.current.length === 0) return;
+
+      const chunk = audioQueue.current.shift(); // FIFO
+      const blob = new Blob([chunk], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play().catch(() => {});
+      }
+    }, 2000); // 2 second chunks
+
+    return () => clearInterval(interval);
+  }, [type]);
+
+  // Update video <img> every 1s
+  useEffect(() => {
+    if (type !== "video") return;
+
+    const interval = setInterval(() => {
+      if (videoQueue.current.length === 0) return;
+
+      const base64 = videoQueue.current.shift();
+      const imgElement = videoRef.current;
+      if (imgElement) {
+        imgElement.src = `data:image/jpeg;base64,${base64}`;
+      }
+    }, 1000); // 1 frame per second
+
+    return () => clearInterval(interval);
+  }, [type]);
 
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
     socket.emit("join-room", "admin-room");
-    console.log("👋 Joined admin-room");
 
     if (type === "cast") {
       socket.on("screen-data", (d) => {
         const base64 = typeof d === "string" ? d : d?.data || "";
         setScreenData(`data:image/jpeg;base64,${base64}`);
-        console.log("🖼️ Screen frame updated");
       });
     }
 
     if (type === "video") {
       socket.on("video-data", (d) => {
         const base64 = typeof d === "string" ? d : d?.data || "";
-        setVideoFrame(`data:image/jpeg;base64,${base64}`);
-        console.log("🎥 Webcam frame updated");
+        if (base64) videoQueue.current.push(base64);
       });
     }
 
     if (type === "audio") {
-      socket.on("audio-data", (buffer) => {
-        const blob = new Blob([buffer], { type: "audio/wav" });
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          audioRef.current.play().catch((e) =>
-            console.warn("🔇 Auto-play blocked:", e.message)
-          );
-        }
-        console.log("🔊 Audio played");
+      socket.on("audio-data", (d) => {
+        const chunk = d?.data || d;
+        if (chunk) audioQueue.current.push(chunk);
       });
     }
 
@@ -74,13 +109,13 @@ const Viewer = () => {
 
       {type === "video" && (
         <img
-          src={videoFrame}
-          alt="Live Webcam Frame"
+          ref={videoRef}
+          alt="Webcam Snapshot"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
 
-      {type === "audio" && <audio ref={audioRef} controls autoPlay src={audioURL} />}
+      {type === "audio" && <audio ref={audioRef} controls autoPlay />}
     </div>
   );
 };
