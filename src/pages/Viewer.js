@@ -12,15 +12,13 @@ const socket = io("https://casttesting.onrender.com", {
 const Viewer = () => {
   const { type } = useParams();
   const [screenData, setScreenData] = useState("");
+  const [videoData, setVideoData] = useState("");
   const audioRef = useRef(null);
-  const videoRef = useRef(null);
 
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
 
-    if (!socket.connected) {
-      socket.connect();
-    }
+    if (!socket.connected) socket.connect();
 
     socket.emit("join-room", "admin-room");
     console.log("👋 Joined admin-room");
@@ -31,7 +29,8 @@ const Viewer = () => {
     };
 
     const handleAudio = (audioBlob) => {
-      const blob = new Blob([audioBlob], { type: "audio/webm" });
+      console.log("🔊 Received audio-data");
+      const blob = new Blob([audioBlob], { type: "audio/wav" }); // updated MIME
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.src = url;
@@ -39,13 +38,10 @@ const Viewer = () => {
       }
     };
 
-    const handleVideo = (videoBlob) => {
-      const blob = new Blob([videoBlob], { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      if (videoRef.current) {
-        videoRef.current.src = url;
-        videoRef.current.play();
-      }
+    const handleVideo = (d) => {
+      console.log("🎥 Received video-data");
+      const base64 = typeof d === "string" ? d : d?.data || "";
+      setVideoData(`data:image/jpeg;base64,${base64}`);
     };
 
     if (type === "cast") socket.on("screen-data", handleScreen);
@@ -53,7 +49,6 @@ const Viewer = () => {
     if (type === "video") socket.on("video-data", handleVideo);
 
     return () => {
-      console.log("🔌 Cleaning up listeners");
       socket.off("screen-data", handleScreen);
       socket.off("audio-data", handleAudio);
       socket.off("video-data", handleVideo);
@@ -64,6 +59,7 @@ const Viewer = () => {
     <div>
       <Navbar />
       <h2>Viewing: {type}</h2>
+
       {type === "cast" && (
         <img
           src={screenData}
@@ -71,8 +67,16 @@ const Viewer = () => {
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
+
       {type === "audio" && <audio ref={audioRef} controls autoPlay />}
-      {type === "video" && <video ref={videoRef} controls autoPlay width="640" height="360" />}
+
+      {type === "video" && (
+        <img
+          src={videoData}
+          alt="Live Video Frame"
+          style={{ width: "640px", height: "360px", border: "1px solid gray" }}
+        />
+      )}
     </div>
   );
 };
