@@ -25,7 +25,7 @@ const Viewer = () => {
       socket.on("screen-data", (d) => {
         const base64 = typeof d === "string" ? d : d?.data || "";
         setScreenData(`data:image/jpeg;base64,${base64}`);
-        console.log("🖼️ Displaying screen frame");
+        console.log("🖼️ Screen frame updated");
       });
     }
 
@@ -33,7 +33,7 @@ const Viewer = () => {
       socket.on("video-data", (d) => {
         const base64 = typeof d === "string" ? d : d?.data || "";
         setVideoFrame(`data:image/jpeg;base64,${base64}`);
-        console.log("🎥 Displaying webcam snapshot");
+        console.log("🎥 Webcam frame updated");
       });
     }
 
@@ -44,11 +44,11 @@ const Viewer = () => {
         setAudioURL(url);
         if (audioRef.current) {
           audioRef.current.src = url;
-          audioRef.current.play().catch((e) => {
-            console.warn("🔇 Auto-play blocked:", e.message);
-          });
+          audioRef.current.play().catch((e) =>
+            console.warn("🔇 Auto-play blocked:", e.message)
+          );
         }
-        console.log("🔊 Playing audio chunk");
+        console.log("🔊 Audio played");
       });
     }
 
@@ -67,7 +67,7 @@ const Viewer = () => {
       {type === "cast" && (
         <img
           src={screenData}
-          alt="Live Screen Frame"
+          alt="Live Screen"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
@@ -75,7 +75,7 @@ const Viewer = () => {
       {type === "video" && (
         <img
           src={videoFrame}
-          alt="Live Webcam Snapshot"
+          alt="Live Webcam Frame"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
