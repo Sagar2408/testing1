@@ -15,47 +15,64 @@ const Viewer = () => {
   const [videoFrame, setVideoFrame] = useState("");
   const [audioURL, setAudioURL] = useState("");
   const audioRef = useRef(null);
+  const videoRef = useRef(null);
 
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
+
+    if (!socket.connected) socket.connect();
     socket.emit("join-room", "admin-room");
     console.log("👋 Joined admin-room");
 
-    if (type === "cast") {
-      socket.on("screen-data", (d) => {
-        const base64 = typeof d === "string" ? d : d?.data || "";
-        setScreenData(`data:image/jpeg;base64,${base64}`);
-        console.log("🖼️ Received screen-data");
-      });
-    }
+    // 🎥 VIDEO HANDLER
+    const handleVideo = (payload) => {
+      if (!payload || !payload.data) return;
+      const base64 = typeof payload.data === "string" ? payload.data : "";
+      const blob = base64ToBlob(base64, "image/jpeg");
+      const url = URL.createObjectURL(blob);
+      if (videoRef.current) {
+        videoRef.current.src = url;
+        videoRef.current.play();
+        console.log("🎥 Playing video frame");
+      }
+    };
 
-    if (type === "video") {
-      socket.on("video-data", (base64Data) => {
-        const image = typeof base64Data === "string" ? base64Data : base64Data?.data || "";
-        setVideoFrame(`data:image/jpeg;base64,${image}`);
-        console.log("🎥 Received video-data");
-      });
-    }
+    // 🔊 AUDIO HANDLER
+    const handleAudio = (payload) => {
+      if (!payload || !payload.data) return;
+      const blob = new Blob([payload.data], { type: "audio/wav" }); // or audio/webm if needed
+      const url = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play();
+        console.log("🔊 Playing audio chunk");
+      }
+    };
 
-    if (type === "audio") {
-      socket.on("audio-data", (buffer) => {
-        const blob = new Blob([buffer], { type: "audio/wav" });
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          audioRef.current.play();
-        }
-        console.log("🔊 Received audio-data");
-      });
-    }
+    // 🖥️ SCREEN HANDLER
+    const handleScreen = (payload) => {
+      const base64 = typeof payload === "string" ? payload : payload?.data || "";
+      setScreenData(`data:image/jpeg;base64,${base64}`);
+      console.log("🖼️ Displaying screen frame");
+    };
+
+    if (type === "cast") socket.on("screen-data", handleScreen);
+    if (type === "video") socket.on("video-data", handleVideo);
+    if (type === "audio") socket.on("audio-data", handleAudio);
 
     return () => {
-      socket.off("screen-data");
-      socket.off("video-data");
-      socket.off("audio-data");
+      socket.off("screen-data", handleScreen);
+      socket.off("video-data", handleVideo);
+      socket.off("audio-data", handleAudio);
     };
   }, [type]);
+
+  // 📦 Helper to convert base64 string to Blob
+  const base64ToBlob = (base64, mimeType) => {
+    const byteChars = atob(base64);
+    const byteArray = new Uint8Array([...byteChars].map(c => c.charCodeAt(0)));
+    return new Blob([byteArray], { type: mimeType });
+  };
 
   return (
     <div>
@@ -65,20 +82,23 @@ const Viewer = () => {
       {type === "cast" && (
         <img
           src={screenData}
-          alt="Live Screen Frame"
+          alt="Live Screen"
           style={{ width: "640px", height: "360px", border: "1px solid gray" }}
         />
       )}
 
       {type === "video" && (
-        <img
-          src={videoFrame}
-          alt="Live Video Frame"
-          style={{ width: "640px", height: "360px", border: "1px solid gray" }}
+        <video
+          ref={videoRef}
+          controls
+          autoPlay
+          width="640"
+          height="360"
+          style={{ border: "1px solid gray" }}
         />
       )}
 
-      {type === "audio" && <audio ref={audioRef} controls autoPlay src={audioURL} />}
+      {type === "audio" && <audio ref={audioRef} controls autoPlay />}
     </div>
   );
 };
