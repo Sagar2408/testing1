@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
 const socket = io("https://flask-lI6n.onrender.com", {
-  transports: ["websocket"],
+  transports: ["polling"],
   reconnectionAttempts: 5,
   timeout: 2000,
 });
