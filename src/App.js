@@ -9,8 +9,8 @@ const App = () => (
   <Routes>
     <Route path="/" element={<Login />} />
     <Route path="/admin/dashboard" element={<AdminDashboard />} />
-    <Route path="/admin/view/:type" element={<Viewer />} />
     <Route path="/executive/dashboard" element={<ExecutiveDashboard />} />
+    <Route path="/viewer" element={<Viewer />} />
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>
 );
