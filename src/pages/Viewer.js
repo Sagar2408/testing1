@@ -11,8 +11,9 @@ const socket = io("https://flask-1-usdt.onrender.com", {
 
 const Viewer = () => {
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const type = params.get("type");
+  const navigate = useNavigate();
+
   const [screenData, setScreenData] = useState("");
   const audioQueue = useRef([]);
   const videoQueue = useRef([]);
