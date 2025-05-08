@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
+// Connect to Flask backend
 const socket = io("https://flask-1-usdt.onrender.com", {
   transports: ["websocket"],
   reconnectionAttempts: 5,
@@ -17,7 +18,7 @@ const Viewer = () => {
   const audioRef = useRef(null);
   const videoRef = useRef(null);
 
-  // Utility to convert base64 to Blob
+  // Utility: base64 to Blob
   const base64ToBlob = (base64, mime) => {
     const byteChars = atob(base64);
     const byteArray = new Uint8Array(
@@ -26,26 +27,26 @@ const Viewer = () => {
     return new Blob([byteArray], { type: mime });
   };
 
-  // Play audio buffer every 2s
+  // Audio playback
   useEffect(() => {
     if (type !== "audio") return;
 
     const interval = setInterval(() => {
       if (audioQueue.current.length === 0) return;
 
-      const chunk = audioQueue.current.shift(); // FIFO
+      const chunk = audioQueue.current.shift();
       const blob = new Blob([chunk], { type: "audio/wav" });
       const url = URL.createObjectURL(blob);
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.play().catch(() => {});
       }
-    }, 2000); // 2 second chunks
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [type]);
 
-  // Update video <img> every 1s
+  // Video frame render
   useEffect(() => {
     if (type !== "video") return;
 
@@ -57,16 +58,17 @@ const Viewer = () => {
       if (imgElement) {
         imgElement.src = `data:image/jpeg;base64,${base64}`;
       }
-    }, 1000); // 1 frame per second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [type]);
 
+  // Socket setup
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
     socket.emit("join-room", "admin-room");
 
-    if (type === "cast") {
+    if (type === "screen") {
       socket.on("screen-data", (d) => {
         const base64 = typeof d === "string" ? d : d?.data || "";
         setScreenData(`data:image/jpeg;base64,${base64}`);
@@ -97,9 +99,12 @@ const Viewer = () => {
   return (
     <div>
       <Navbar />
-      <h2>Viewing: {type}</h2>
+      <h2>
+        Viewing:{" "}
+        {type === "screen" ? "Screen" : type === "video" ? "Video" : "Audio"}
+      </h2>
 
-      {type === "cast" && (
+      {type === "screen" && (
         <img
           src={screenData}
           alt="Live Screen"
