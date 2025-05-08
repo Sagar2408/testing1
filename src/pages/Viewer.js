@@ -4,10 +4,11 @@ import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
 const socket = io("https://flask-1-usdt.onrender.com", {
-  transports: ["websocket"],
+  transports: ["polling"],
   reconnectionAttempts: 5,
   timeout: 2000,
 });
+
 
 const Viewer = () => {
   const [params] = useSearchParams();
