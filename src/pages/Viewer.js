@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
-const socket = io("https://flask-lI6n.onrender.com", {
+const socket = io("https://flask-1-usdt.onrender.com", {
   transports: ["websocket"],
   reconnectionAttempts: 5,
   timeout: 2000,
