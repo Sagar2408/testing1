@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
-const socket = io("https://flask-1-usdt.onrender.com", {
+const socket = io("https://flaskfixedi.onrender.com", {
   transports: ["polling"],
   reconnectionAttempts: 5,
   timeout: 2000,
