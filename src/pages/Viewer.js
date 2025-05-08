@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
 
-// Connect to Flask backend
 const socket = io("https://flask-1-usdt.onrender.com", {
   transports: ["websocket"],
   reconnectionAttempts: 5,
@@ -18,7 +17,6 @@ const Viewer = () => {
   const audioRef = useRef(null);
   const videoRef = useRef(null);
 
-  // Utility: base64 to Blob
   const base64ToBlob = (base64, mime) => {
     const byteChars = atob(base64);
     const byteArray = new Uint8Array(
@@ -27,7 +25,7 @@ const Viewer = () => {
     return new Blob([byteArray], { type: mime });
   };
 
-  // Audio playback
+  // Audio
   useEffect(() => {
     if (type !== "audio") return;
 
@@ -46,7 +44,7 @@ const Viewer = () => {
     return () => clearInterval(interval);
   }, [type]);
 
-  // Video frame render
+  // Video
   useEffect(() => {
     if (type !== "video") return;
 
@@ -63,20 +61,24 @@ const Viewer = () => {
     return () => clearInterval(interval);
   }, [type]);
 
-  // Socket setup
+  // Sockets
   useEffect(() => {
     console.log("🧭 Viewer mounted for:", type);
     socket.emit("join-room", "admin-room");
 
     if (type === "screen") {
       socket.on("screen-data", (d) => {
+        console.log("🖥 Screen-data received:", d);
         const base64 = typeof d === "string" ? d : d?.data || "";
-        setScreenData(`data:image/jpeg;base64,${base64}`);
+        if (base64) {
+          setScreenData(`data:image/jpeg;base64,${base64}`);
+        }
       });
     }
 
     if (type === "video") {
       socket.on("video-data", (d) => {
+        console.log("🎥 Video-data received:", d);
         const base64 = typeof d === "string" ? d : d?.data || "";
         if (base64) videoQueue.current.push(base64);
       });
@@ -84,6 +86,7 @@ const Viewer = () => {
 
     if (type === "audio") {
       socket.on("audio-data", (d) => {
+        console.log("🔊 Audio-data received:", d);
         const chunk = d?.data || d;
         if (chunk) audioQueue.current.push(chunk);
       });
@@ -105,11 +108,16 @@ const Viewer = () => {
       </h2>
 
       {type === "screen" && (
-        <img
-          src={screenData}
-          alt="Live Screen"
-          style={{ width: "640px", height: "360px", border: "1px solid gray" }}
-        />
+        <>
+          {!screenData && (
+            <p style={{ color: "red" }}>⚠️ Waiting for screen-data...</p>
+          )}
+          <img
+            src={screenData}
+            alt="Live Screen"
+            style={{ width: "640px", height: "360px", border: "1px solid gray" }}
+          />
+        </>
       )}
 
       {type === "video" && (
